@@ -1,8 +1,12 @@
 """Symbol-universe loading for ranked market views."""
 
 from pathlib import Path
+from io import BytesIO
+from urllib.request import Request, urlopen
 
 import pandas as pd
+
+NSE_EQUITY_DIRECTORY_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
 
 MONEYCONTROL_RANKING_URLS = {
     "Gainers": "https://www.moneycontrol.com/stocks/market-stats/top-gainers-nse/?indexName=NIFTY%20500&id=7",
@@ -38,6 +42,22 @@ def load_constituents(path: Path) -> list[tuple[str, str]]:
         raise ValueError(f"Constituent CSV is missing columns: {', '.join(sorted(missing))}")
     columns = {str(column).strip().lower(): column for column in frame.columns}
     return [(str(row[columns["symbol"]]).strip().upper(), str(row[columns["exchange"]]).strip().upper()) for _, row in frame.iterrows()]
+
+
+def load_nse_stock_directory() -> pd.DataFrame:
+    """Fetch the current NSE symbol and company-name directory."""
+    request = Request(NSE_EQUITY_DIRECTORY_URL, headers={"User-Agent": "Mozilla/5.0", "Accept": "text/csv"})
+    with urlopen(request, timeout=15) as response:
+        frame = pd.read_csv(BytesIO(response.read()))
+    columns = {str(column).strip().upper(): column for column in frame.columns}
+    if "SYMBOL" not in columns or "NAME OF COMPANY" not in columns:
+        raise ValueError("NSE stock directory returned an unexpected format.")
+    return pd.DataFrame(
+        {
+            "symbol": frame[columns["SYMBOL"]].astype(str).str.strip().str.upper(),
+            "name": frame[columns["NAME OF COMPANY"]].astype(str).str.strip(),
+        }
+    ).drop_duplicates("symbol")
 
 
 def parse_moneycontrol_rankings(frame: pd.DataFrame) -> pd.DataFrame:

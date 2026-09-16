@@ -1,6 +1,6 @@
-# Personal Portfolio Desk
+# NiveshIQ
 
-Personal portfolio tracking application built around manual Zerodha statement uploads, delayed public market data, SQLite, a Streamlit UI, and an optional LangGraph assistant.
+Indian portfolio and market research application built around manual Zerodha statement uploads, delayed public market data, SQLite, Streamlit, and a tool-grounded LangGraph assistant.
 
 This project follows the attached architecture documents. It does not use a broker API, WebSockets, Redis, Celery, or an LLM to calculate portfolio numbers.
 
@@ -10,7 +10,7 @@ This project follows the attached architecture documents. It does not use a brok
 
 - Phase 1: Holdings upload, validation, confirmation gate, SQLite schema, snapshot diffs, and Dashboard.
 - Phase 2: `yfinance` quote/history provider, SQLite price cache, Chart page, public Gainers/Losers page, stock details, recommendations, and IPO scanner.
-- Phase 4 initial slice: Chroma persistence, local Hugging Face embeddings, LangGraph tools/agent, chat page, optional LangSmith tracing, and knowledge-note indexing.
+- Phase 4 initial slice: Chroma persistence, local Hugging Face embeddings, unified LangGraph tool agent, connection testing, deterministic fallback responses, optional LangSmith tracing, and knowledge-note indexing.
 
 ### Not Yet Implemented
 
@@ -79,14 +79,14 @@ The relational database and vector store are intentionally separate. Holdings, p
 ```text
 app.py                         Streamlit entry point and navigation
 pages/
-  1_Dashboard.py              Current holdings dashboard
+  1_Dashboard.py              Current holdings dashboard and recommendations
   2_Upload_Statements.py      Holdings upload and confirmation workflow
-        3_Market_Trends.py          Held-symbol line, bar, or candlestick chart
-        4_Gainers_Losers.py         Ranked public quote view
-        6_Stock_Details.py          Quote, fundamentals, and trend screen
-        7_IPO_Scanner.py             Public IPO snapshot and research table
-        8_Recommendations.py        Portfolio-wide sector and trend screen
-  5_Chat_Assistant.py         LangGraph chat UI
+  3_Market_Trends.py          Held-symbol line, bar, or candlestick chart
+  4_Gainers_Losers.py         Ranked public quote view
+  5_Chat_Assistant.py         Unified LangGraph chat UI
+  6_Stock_Details.py          Quote, fundamentals, and trend screen
+  7_IPO_Scanner.py            Public IPO snapshot and research table
+  8_Recommendations.py        Index-based top-20 momentum research
 core/config.py                Session credential policy
 core/ingestion/               Pydantic schemas and Holdings parser
 core/market_data/             PriceProvider, yfinance, cache service, universe loader
@@ -94,7 +94,7 @@ core/storage/                 SQLAlchemy models, SQLite setup, repositories
 core/rag/                     Chroma and Hugging Face retrieval
 core/agent/                   LangGraph graph and relational tools
 tests/                        Automated tests
-data/                          Runtime SQLite and Chroma files; keep out of Git
+data/                          UI assets; runtime database/vector data is ignored
 requirements.txt              pip dependencies
 pyproject.toml                Project metadata and pytest configuration
 ```
@@ -118,7 +118,7 @@ The current environment has been validated with Python 3.14. Chroma and sentence
 streamlit run app.py
 ```
 
-The sidebar requires an OpenAI API key before the application pages are unlocked. The key is held in the Streamlit session and is not written to SQLite.
+The application works with deterministic tool-only fallback responses without an OpenAI key. Add an OpenAI API key in the sidebar to enable natural-language synthesis through `gpt-4o-mini`. The key is held in the Streamlit session and is not written to SQLite.
 
 ### Optional LangSmith Tracing
 
@@ -153,33 +153,40 @@ Open **Gainers / losers**, choose **Gainers** or **Losers**, and press **Refresh
 
 ### 5. Use the Assistant
 
-Open **Chat assistant** and ask about holdings, cached prices, invested value, or P&L. The agent is instructed to call relational tools for exact numbers.
+Open **Chat assistant** and ask about holdings, prices, P&L, stocks, recommendations, indexes, IPOs, or market concepts. All questions use one unified workflow: the LangGraph agent routes the question to approved tools and the LLM explains the results. If OpenAI is unavailable, the assistant returns a deterministic tool-grounded fallback for supported portfolio, index, and IPO queries.
+
+Use **Test OpenAI connection** to verify access to `gpt-4o-mini` before sending a general question.
 
 Use **Add a knowledge note** for tax rules, glossary entries, or personal research. Notes are embedded locally and stored in Chroma. Do not use notes as a substitute for official numeric portfolio data.
 
 ### 6. Research Stocks and IPOs
 
-**Stock details** shows public quote, sector, industry, valuation fields, moving averages, and momentum when the provider supplies them. **Recommendations** applies a transparent trend screen to current holdings and includes sector context. **IPO scanner** loads public IPO rows and subscription or listing statistics. These screens are research aids, not buy advice; verify official filings and the prospectus before acting.
+**Stock details** shows public quote, sector, industry, valuation fields, moving averages, and momentum when the provider supplies them. **Recommendations** loads top-20 momentum candidates for supported indexes such as NIFTY 50, NIFTY 100, NIFTY Bank, NIFTY Auto, NIFTY IT, NIFTY Metal, NIFTY Pharma, and other supported public index screens. **IPO scanner** loads public IPO rows and subscription or listing statistics. These screens are research aids, not buy advice; verify official filings and the prospectus before acting.
 
 ## Agent and Tool Design
 
-The assistant uses a LangGraph ReAct graph with an OpenAI chat model and four tools:
+The assistant uses a LangGraph ReAct graph with an OpenAI chat model and approved data tools:
 
 - `get_holdings`: returns current symbols, exchanges, quantities, average costs, and cost values from SQLite.
 - `get_price`: returns a cached delayed quote for a symbol.
 - `get_pnl_summary`: calculates invested value, available cached market value, and the difference from relational data.
+- `get_stock_details`: returns delayed stock quote, fundamentals, sector, and technical indicators.
+- `get_stock_recommendations`: returns a transparent trend screen for a stock.
+- `get_index_recommendations`: returns public top-20 momentum candidates for a supported index.
+- `get_ipo_research`: returns public IPO research rows and statistics.
 - `search_knowledge`: searches the Chroma knowledge collection for explanations and notes.
 
-The system prompt establishes the critical boundary: the model must not invent or calculate authoritative portfolio figures from memory, and Chroma must not be used for exact holdings or P&L.
+The system prompt establishes the critical boundary: the model must call approved tools for factual market data, must not invent or calculate authoritative portfolio figures from memory, and must not use Chroma for exact holdings or P&L. A deterministic fallback remains available when the LLM cannot connect.
 
 The current LLM is `gpt-4o-mini` because the application needs reliable tool calling at modest cost. The model is replaceable inside `core/agent/graph.py`; the deterministic tools remain independent of that choice.
 
 ## Data and Security
 
-- `data/portfolio.db` contains holdings, snapshots, diffs, and cached prices.
-- `data/chroma_db/` contains locally persisted embeddings and note text.
+- `data/portfolio.db` contains holdings, snapshots, diffs, and cached prices and is ignored by Git.
+- `data/chroma_db/` contains locally persisted embeddings and note text and is ignored by Git.
+- `data/market-icon.jpg` and `data/indian-rupee-symbol.png` are UI assets and should be committed.
 - API keys are entered into the Streamlit session and are not stored in the database.
-- Do not commit `data/`, `.streamlit/secrets.toml`, `.env`, or API keys.
+- Do not commit `data/portfolio.db`, `data/chroma_db/`, `.streamlit/secrets.toml`, `.env`, or API keys. Keep the two UI image assets in `data/`.
 - This is a personal tool, not a trading or tax-advice system.
 - Public market prices are delayed and should not be used for intraday execution decisions.
 - Verify Zerodha parses against the original export before confirming replacement.
@@ -191,7 +198,11 @@ python -m pytest -q
 python -m compileall -q app.py core pages tests
 ```
 
-Tests currently cover valid Holdings parsing, missing required columns, duplicate positions, and deterministic quote-cache persistence. Market and LLM tests should remain mocked so test runs do not depend on Yahoo Finance, OpenAI, or LangSmith availability.
+Tests currently cover valid Holdings parsing, missing required columns, duplicate positions, deterministic quote-cache persistence, public ranking normalization, and IPO normalization. Market and LLM tests should remain mocked so test runs do not depend on Yahoo Finance, OpenAI, or LangSmith availability.
+
+## Streamlit Deployment
+
+Push the project root to GitHub and deploy `app.py` from Streamlit Community Cloud. Commit source code, `requirements.txt`, `pyproject.toml`, documentation, sample data, and the two UI image assets. Do not commit API keys, the local portfolio database, Chroma runtime data, Python caches, or editor metadata. After deployment, upload and confirm the holdings statement again because Streamlit Cloud storage is not a permanent database.
 
 ## Development Notes
 

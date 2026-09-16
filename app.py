@@ -52,6 +52,7 @@ pages = {
         st.Page("pages/2_Upload_Statements.py", title="Upload statements", icon=":material/upload_file:"),
     ],
     "Market research": [
+        st.Page("pages/3_Market_Trends.py", title="Chart", icon=":material/show_chart:"),
         st.Page("pages/6_Stock_Details.py", title="Stock details", icon=":material/search:"),
         st.Page("pages/8_Recommendations.py", title="Recommendations", icon=":material/insights:"),
         st.Page("pages/7_IPO_Scanner.py", title="IPO scanner", icon=":material/assignment:"),
@@ -61,7 +62,6 @@ if has_confirmed_holdings:
     pages["Portfolio"] = [
         st.Page("pages/2_Upload_Statements.py", title="Upload statements", icon=":material/upload_file:"),
         st.Page("pages/1_Dashboard.py", title="Dashboard", icon=":material/dashboard:"),
-        st.Page("pages/3_Market_Trends.py", title="Chart", icon=":material/show_chart:"),
         st.Page("pages/4_Gainers_Losers.py", title="Gainers / losers", icon=":material/leaderboard:"),
         st.Page("pages/5_Chat_Assistant.py", title="Chat assistant", icon=":material/chat:"),
     ]

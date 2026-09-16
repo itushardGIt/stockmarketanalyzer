@@ -38,7 +38,7 @@ if st.button("Load recommendations", type="primary"):
     )
     st.link_button(
         f"View {selected_stock} on Yahoo Finance",
-        f"https://finance.yahoo.com/quote/{selected_stock.replace(' ', '').upper()}.NS/",
+        f"https://finance.yahoo.com/quote/{str(selected_stock).replace(' ', '').upper()}.NS/",
     )
     st.info("Review momentum is a shortlist signal only. Check valuation, fundamentals, liquidity, risk, and official disclosures before investing.")
 else:

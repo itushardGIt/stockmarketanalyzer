@@ -9,8 +9,7 @@ import streamlit as st
 @contextmanager
 def market_progress(label: str) -> Iterator[None]:
     """Show a staged market progress bar while a blocking action runs."""
-    progress = st.progress(8, text=f"🔍 {label} 8%")
-    progress.progress(28, text=f"🔍 {label} 28%")
+    progress = st.progress(5, text=f"🔍 {label} 5%")
     try:
         yield
     except Exception:

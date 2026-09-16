@@ -1,0 +1,16 @@
+pandas>=2.2
+pydantic>=2.8
+openpyxl>=3.1
+SQLAlchemy>=2.0
+streamlit>=1.38
+pytest>=8.0
+yfinance>=0.2.40
+plotly>=5.24
+langgraph>=1.0
+langchain>=1.0
+langchain-openai>=1.0
+langchain-chroma>=0.2
+chromadb>=1.0
+langchain-huggingface>=0.1
+sentence-transformers>=3.0
+langsmith>=0.2

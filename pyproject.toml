@@ -1,0 +1,18 @@
+[project]
+name = "portfolio-app"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.2",
+    "pydantic>=2.8",
+    "openpyxl>=3.1",
+    "SQLAlchemy>=2.0",
+    "streamlit>=1.38",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

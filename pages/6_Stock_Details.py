@@ -19,8 +19,8 @@ def reset_stock_details() -> None:
     """Clear the stock search and any previously loaded analysis."""
     st.session_state.pop("stock_details", None)
     st.session_state.pop("stock_recommendation", None)
-    st.session_state["stock_search_query"] = ""
-    st.session_state.pop("stock_search_match", None)
+    st.session_state.pop("stock_search_NSE", None)
+    st.session_state.pop("stock_search_BSE", None)
 
 exchange = st.selectbox("Exchange", ["BSE", "NSE"], index=0, key="stock_exchange")
 with create_database(Path("data/portfolio.db"))() as session:
@@ -37,33 +37,23 @@ held_directory = pd.DataFrame(held_symbols, columns=["symbol", "exchange"])
 if not held_directory.empty:
     held_directory["name"] = held_directory["symbol"]
     directory = pd.concat([directory, held_directory.loc[held_directory["exchange"] == exchange, ["symbol", "name"]]], ignore_index=True).drop_duplicates("symbol")
-search_query = st.text_input(
-    f"{exchange} Stock",
-    key="stock_search_query",
-    placeholder="Start typing a company name or symbol...",
-    help="Enter at least one character to search the live stock directory.",
-).strip().upper()
-matching_rows = directory.iloc[0:0]
-if search_query:
-    matching_rows = directory[
-        directory["symbol"].str.contains(search_query, na=False)
-        | directory["name"].str.upper().str.contains(search_query, na=False)
-    ].head(20)
-
 stock_options = {
     f"{str(row['symbol'])} | {str(row['name'])}": str(row["symbol"])
-    for _, row in matching_rows.iterrows()
+    for _, row in directory.iterrows()
 }
-selected_label = None
-if stock_options:
-    selected_label = st.selectbox(
-        "Matching stocks",
-        list(stock_options),
-        index=None,
-        placeholder="Select a matching stock...",
-        key="stock_search_match",
-    )
-symbol = stock_options.get(selected_label, search_query) if selected_label else search_query
+default_symbol = st.session_state.get("selected_research_stock", "")
+option_labels = list(stock_options)
+default_index = next((index for index, label in enumerate(option_labels) if stock_options[label] == default_symbol), None)
+selected_label = st.selectbox(
+    f"{exchange} Stock",
+    option_labels,
+    index=default_index,
+    placeholder="Search company name or symbol...",
+    key=f"stock_search_{exchange}",
+    help="Type to filter, use arrow keys to navigate, and press Enter to select.",
+    accept_new_options=True,
+)
+symbol = stock_options.get(selected_label, str(selected_label).split(" | ", 1)[0].strip().upper()) if selected_label else ""
 load_col, reset_col = st.columns(2)
 with load_col:
     load_details = st.button("Load details", type="primary", disabled=not symbol, use_container_width=True)

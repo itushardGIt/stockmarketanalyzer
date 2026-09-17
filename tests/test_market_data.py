@@ -8,7 +8,7 @@ import pandas as pd
 
 from core.market_data.provider import Quote
 from core.market_data.service import refresh_quotes
-from core.market_data.ipo import parse_ipo_snapshot
+from core.market_data.ipo import _extract_iposcanner_rows, parse_ipo_snapshot
 from core.market_data.universe import parse_moneycontrol_rankings
 from core.storage.database import create_database
 from core.storage.models import PriceCache
@@ -67,3 +67,38 @@ def test_parse_ipo_snapshot_keeps_public_statistics() -> None:
     assert result.loc[0, "Company"] == "Example Technologies IPO"
     assert result.loc[0, "Subscription"] == "12.5x"
     assert result.loc[0, "Issue size"] == "₹ 500 Cr"
+    assert result.loc[0, "Research signal"] == "Subscribe / strong demand"
+
+
+def test_parse_ipo_snapshot_sorts_latest_listing_first() -> None:
+    """The dashboard starts with the latest available IPO listing date."""
+    tables = [
+        pd.DataFrame(
+            {
+                "Company Name": ["Older IPO", "Latest IPO"],
+                "Listing Date": ["10 Sep 26", "17 Sep 26"],
+                "Total Subscription": ["0.8x", "2.0x"],
+            }
+        )
+    ]
+
+    result = parse_ipo_snapshot(tables)
+
+    assert result.loc[0, "Company"] == "Latest IPO"
+    assert result.loc[0, "Research signal"] == "Review / moderate demand"
+
+
+def test_extract_iposcanner_rows() -> None:
+    """IPOScanner's embedded feed is normalized into the scanner schema."""
+    page = (
+        r'\"company\":\"Example IPO\",\"offerPriceRange\":[100,110],'
+        r'\"subscribedTimes\":6.5,\"expectedPremium\":{\"percent\":12.5},'
+        r'\"offerStart\":\"2026-09-17\",\"offerEnd\":\"2026-09-21\",'
+        r'\"listingDate\":\"2026-09-24\"'
+    )
+
+    rows = _extract_iposcanner_rows(page)
+
+    assert rows[0]["Company"] == "Example IPO"
+    assert rows[0]["Issue price"] == "₹ 100 - ₹ 110"
+    assert rows[0]["Research signal"] == "Subscribe / strong demand"

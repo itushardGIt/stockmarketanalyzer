@@ -10,6 +10,7 @@ from core.ingestion.parser import UploadParseError, parse_holdings
 from core.storage.database import create_database
 from core.storage.models import HoldingSnapshot
 from core.ui import market_progress
+from core.ui import styled_table
 from core.storage.repositories import confirm_holdings_upload
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -49,7 +50,7 @@ review_table = pd.DataFrame(
         for row in parsed.rows
     ]
 )
-st.dataframe(review_table, use_container_width=True, hide_index=True)
+st.dataframe(styled_table(review_table), use_container_width=True, hide_index=True)
 
 session_factory = create_database(Path("data/portfolio.db"))
 with session_factory() as session:
@@ -84,7 +85,7 @@ if previous:
     for column, label in zip(diff_metrics, ["New", "Exited", "Quantity changed", "Cost changed"]):
         column.metric(label, int((diff_table["Change"] == label).sum()))
     selected_changes = st.multiselect("Show changes", sorted(diff_table["Change"].unique()), default=sorted(diff_table["Change"].unique()))
-    st.dataframe(diff_table[diff_table["Change"].isin(selected_changes)], use_container_width=True, hide_index=True)
+    st.dataframe(styled_table(diff_table[diff_table["Change"].isin(selected_changes)]), use_container_width=True, hide_index=True)
 else:
     st.info("This is the first upload, so there is no previous snapshot to compare.")
 

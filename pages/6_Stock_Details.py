@@ -95,7 +95,8 @@ fundamentals = {
     "1-year return %": details["return_1y_pct"],
 }
 st.subheader("Fundamentals and trend")
-st.dataframe(pd.DataFrame([fundamentals]), use_container_width=True, hide_index=True)
+from core.ui import styled_table
+st.dataframe(styled_table(pd.DataFrame([fundamentals])), use_container_width=True, hide_index=True)
 st.subheader("Trend screen")
 st.info(f"{recommendation['Screen']}: {recommendation['Signals']}")
 st.caption("The screen combines moving-average trend and momentum. It is not a personalized buy recommendation.")

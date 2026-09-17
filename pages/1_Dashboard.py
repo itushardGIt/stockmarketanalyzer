@@ -9,7 +9,7 @@ import streamlit as st
 from core.storage.database import create_database
 from core.storage.models import HoldingSnapshot
 from core.market_data.analytics import get_stock_recommendation
-from core.ui import market_progress
+from core.ui import market_progress, styled_table
 
 st.header("Dashboard")
 database_path = Path("data/portfolio.db")
@@ -43,7 +43,7 @@ table = pd.DataFrame(
 left, right = st.columns([1.5, 1], gap="small")
 with left:
     st.subheader("Holdings")
-    st.dataframe(table, use_container_width=True, hide_index=True)
+    st.dataframe(styled_table(table), use_container_width=True, hide_index=True)
 
 with right:
     st.subheader("Allocation by position")
@@ -82,6 +82,6 @@ if st.button("Refresh holding recommendations", type="primary"):
         def screen_style(value: object) -> str:
             colors = {"BUY CANDIDATE": "#1f9d74", "WATCH": "#d99a2b", "WAIT": "#c45454"}
             return f"background-color: {colors.get(str(value), '#43545b')}; color: white; font-weight: 700; border-radius: 12px; text-align: center;"
-        st.dataframe(recommendation_table.style.map(screen_style, subset=["Screen"]), use_container_width=True, hide_index=True)
+        st.dataframe(styled_table(recommendation_table, screen_style, ["Screen"]), use_container_width=True, hide_index=True)
     if unavailable:
         st.warning("Unavailable: " + ", ".join(unavailable))
